@@ -18,6 +18,6 @@ stages:
     - script: |
         echo Agent: %AGENT_NAME%
         az acr login -n javademosregistry
-        mvn compile jib:build ^
+        mvn compile jib:build 
           -Djib.to.image=javademosregistry.azurecr.io/demo:%BUILD_BUILDID%
       displayName: Build with Maven + Jib
