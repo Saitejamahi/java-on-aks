@@ -25,7 +25,7 @@ stages:
     - task: AzureCLI@2
       displayName: Login to Azure & ACR
       inputs:
-        azureSubscription: 'Azure subscription 1'  # Replace with your AzureRM service connection
+        azureSubscription: 'ACR_Docker_Connection'  # Replace with your AzureRM service connection
         scriptType: 'ps'  # PowerShell
         scriptLocation: 'inlineScript'
         inlineScript: |
@@ -37,3 +37,10 @@ stages:
         echo "Building Docker image with Maven + Jib..."
         mvn compile jib:build -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/demo:$(IMAGE_TAG)
       displayName: Build with Maven + Jib
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'ACR_Docker_Connection'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        displayName: Build and Push Docker Image
+   
