@@ -10,20 +10,14 @@ stages:
   displayName: Build stage
   jobs:
   - job: Build
-    displayName: Build & Push Image to ACR
+    displayName: Build & Push Image
     pool:
       name: self-hosted-pool2
-      vmImage: ubuntu-latest
 
     steps:
-    - task: Bash@3
-      displayName: Build & Push using Jib
-      inputs:
-        targetType: inline
-        script: |
-          echo "Login to ACR"
-          az acr login -n javademosregistry
-
-          echo "Build Spring Boot image"
-          mvn compile jib:build \
-            -Djib.to.image=javademosregistry.azurecr.io/demo:$(Build.BuildId)
+    - script: |
+        echo Agent: %AGENT_NAME%
+        az acr login -n javademosregistry
+        mvn compile jib:build ^
+          -Djib.to.image=javademosregistry.azurecr.io/demo:%BUILD_BUILDID%
+      displayName: Build with Maven + Jib
