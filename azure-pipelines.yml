@@ -2,141 +2,27 @@ trigger:
 - master
 
 variables:
-  CONTAINER_REGISTRY: 'kubernete'
+  CONTAINER_REGISTRY: 'javademosregistry'
   IMAGE_TAG: '$(Build.BuildId)'
-  vmImageName: 'ubuntu-latest'
 
 stages:
-# ============================
-# BUILD STAGE
-# ============================
 - stage: Build
   displayName: Build stage
   jobs:
   - job: Build
-    displayName: Build & Push Images to ACR
+    displayName: Build & Push Image to ACR
     pool:
-      name: self-hosted-pool2
-      vmImage: $(vmImageName)
+      vmImage: ubuntu-latest
 
     steps:
-    - task: AzureKeyVault@1
-      displayName: Fetch secrets from Azure Key Vault
-      inputs:
-        azureSubscription: 'Java Demos 2'
-        KeyVaultName: 'piggymetrics'
-        SecretsFilter: '*'
-
     - task: Bash@3
-      displayName: Build & Push Images using Jib
+      displayName: Build & Push using Jib
       inputs:
         targetType: inline
         script: |
           echo "Login to ACR"
-          az acr login -n $(CONTAINER_REGISTRY)
+          az acr login -n javademosregistry
 
-          export IMAGE_TAG=$(IMAGE_TAG)
-          export CONTAINER_REGISTRY=$(CONTAINER_REGISTRY)
-
-          echo "Build config-service"
-          cd config
+          echo "Build Spring Boot image"
           mvn compile jib:build \
-            -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/config:$(IMAGE_TAG) \
-            -Djib.container.environment=CONFIG_SERVICE_PASSWORD=$(CONFIG-SERVICE-PASSWORD)
-
-          echo "Build registry"
-          cd ../registry
-          mvn compile jib:build \
-            -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/registry:$(IMAGE_TAG)
-
-          echo "Build gateway"
-          cd ../gateway
-          mvn compile jib:build \
-            -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/gateway:$(IMAGE_TAG)
-
-          echo "Build auth-service"
-          cd ../auth-service
-          mvn compile jib:build \
-            -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/auth-service:$(IMAGE_TAG)
-
-          echo "Build account-service"
-          cd ../account-service
-          mvn compile jib:build \
-            -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/account-service:$(IMAGE_TAG) \
-            -Djib.container.environment=ACCOUNT_SERVICE_PASSWORD=$(ACCOUNT-SERVICE-PASSWORD)
-
-          echo "Build statistics-service"
-          cd ../statistics-service
-          mvn compile jib:build \
-            -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/statistics-service:$(IMAGE_TAG) \
-            -Djib.container.environment=STATISTICS_SERVICE_PASSWORD=$(STATISTICS-SERVICE-PASSWORD)
-
-          echo "Build notification-service"
-          cd ../notification-service
-          mvn compile jib:build \
-            -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/notification-service:$(IMAGE_TAG) \
-            -Djib.container.environment=NOTIFICATION_SERVICE_PASSWORD=$(NOTIFICATION-SERVICE-PASSWORD)
-
-    - publish: kubernetes
-      artifact: kubernetes
-
-# ============================
-# DEPLOY STAGE
-# ============================
-- stage: Deploy
-  displayName: Deploy to AKS
-  dependsOn: Build
-
-  jobs:
-  - deployment: Deploy
-    displayName: Deploy Piggymetrics to AKS
-    pool:
-      vmImage: $(vmImageName)
-
-    environment: 'Piggymetrics'
-
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: AzureKeyVault@1
-            displayName: Fetch secrets from Azure Key Vault
-            inputs:
-              azureSubscription: 'Java Demos 2'
-              KeyVaultName: 'piggymetrics'
-              SecretsFilter: '*'
-
-          - task: replacetokens@3
-            displayName: Replace image tags in manifests
-            inputs:
-              targetFiles: '$(Pipeline.Workspace)/kubernetes/*.yaml'
-              tokenPrefix: '${'
-              tokenSuffix: '}'
-
-          - task: KubernetesManifest@0
-            displayName: Create Kubernetes Secrets
-            inputs:
-              action: createSecret
-              secretType: generic
-              secretName: piggymetrics
-              secretArguments: >
-                --from-literal=config_service_password=$(CONFIG-SERVICE-PASSWORD)
-                --from-literal=notification_service_password=$(NOTIFICATION-SERVICE-PASSWORD)
-                --from-literal=statistics_service_password=$(STATISTICS-SERVICE-PASSWORD)
-                --from-literal=account_service_password=$(ACCOUNT-SERVICE-PASSWORD)
-                --from-literal=rabbitmq_password=$(RABBITMQ-PASSWORD)
-                --from-literal=mongodb_uri=$(MONGODB-URI)
-                --from-literal=mongodb_database=$(MONGODB-DATABASE)
-
-          - task: KubernetesManifest@0
-            displayName: Deploy to AKS
-            inputs:
-              action: deploy
-              manifests: |
-                $(Pipeline.Workspace)/kubernetes/1-config.yaml
-                $(Pipeline.Workspace)/kubernetes/2-registry.yaml
-                $(Pipeline.Workspace)/kubernetes/3-gateway.yaml
-                $(Pipeline.Workspace)/kubernetes/4-auth-service.yaml
-                $(Pipeline.Workspace)/kubernetes/5-account-service.yaml
-                $(Pipeline.Workspace)/kubernetes/6-statistics-service.yaml
-                $(Pipeline.Workspace)/kubernetes/7-notification-service.yaml
+            -Djib.to.image=javademosregistry.azurecr.io/demo:$(Build.BuildId)
