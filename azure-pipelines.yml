@@ -2,7 +2,7 @@ trigger:
 - master
 
 variables:
-  CONTAINER_REGISTRY: 'javademosregistry'
+  CONTAINER_REGISTRY: 'kubernete'
   IMAGE_TAG: '$(Build.BuildId)'
   vmImageName: 'ubuntu-latest'
 
@@ -16,6 +16,7 @@ stages:
   - job: Build
     displayName: Build & Push Images to ACR
     pool:
+      name: self-hosted-pool2
       vmImage: $(vmImageName)
 
     steps:
