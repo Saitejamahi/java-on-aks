@@ -7,7 +7,7 @@ variables:
 
 stages:
 - stage: Build
-  displayName: Build stage
+  displayName: Build Stage
   jobs:
   - job: Build
     displayName: Build & Push Image
@@ -15,9 +15,25 @@ stages:
       name: self-hosted-pool2
 
     steps:
+    # Step 1: Echo Agent Info
     - script: |
-        echo Agent: %AGENT_NAME%
-        az acr login -n javademosregistry
-        mvn compile jib:build 
-          -Djib.to.image=javademosregistry.azurecr.io/demo:%BUILD_BUILDID%
+        echo "Running on agent: %AGENT_NAME%"
+        echo "Build ID: $(Build.BuildId)"
+      displayName: Agent Info
+
+    # Step 2: Login to Azure and ACR
+    - task: AzureCLI@2
+      displayName: Login to Azure & ACR
+      inputs:
+        azureSubscription: 'Azure subscription 1'  # Replace with your AzureRM service connection
+        scriptType: 'ps'  # PowerShell
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Logging in to Azure..."
+          az acr login -n $(CONTAINER_REGISTRY)
+    
+    # Step 3: Build Docker Image with Maven + Jib
+    - script: |
+        echo "Building Docker image with Maven + Jib..."
+        mvn compile jib:build -Djib.to.image=$(CONTAINER_REGISTRY).azurecr.io/demo:$(IMAGE_TAG)
       displayName: Build with Maven + Jib
