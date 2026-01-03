@@ -12,6 +12,7 @@ stages:
   - job: Build
     displayName: Build & Push Image to ACR
     pool:
+      name: self-hosted-pool2
       vmImage: ubuntu-latest
 
     steps:
